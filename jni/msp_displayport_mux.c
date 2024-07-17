@@ -1,3 +1,6 @@
+#include <signal.h>
+#include <stdio.h>
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -134,11 +137,25 @@ static void send_variant_request(int serial_fd) {
     uint8_t buffer[6];
     construct_msp_command(buffer, MSP_CMD_FC_VARIANT, NULL, 0, MSP_OUTBOUND);
     write(serial_fd, &buffer, sizeof(buffer));
+    DEBUG_PRINT("send_variant_request %d\n", (int)sizeof(buffer));
+}
+
+static void send_version_request2(int serial_fd) {
+    uint8_t buffer[6];
+    construct_msp_command(buffer, MSP_CMD_FC_VERSION, NULL, 0, MSP_OUTBOUND);
+    write(serial_fd, &buffer, sizeof(buffer));
+    DEBUG_PRINT("send_version_request2 %d\n", (int)sizeof(buffer));
 }
 
 static void send_version_request(int serial_fd) {
     uint8_t buffer[6];
     construct_msp_command(buffer, MSP_CMD_API_VERSION, NULL, 0, MSP_OUTBOUND);
+    write(serial_fd, &buffer, sizeof(buffer));
+}
+
+static void x_send_status(int serial_fd) {
+    uint8_t buffer[6];
+    construct_msp_command(buffer, MSP_CMD_STATUS, NULL, 0, MSP_OUTBOUND);
     write(serial_fd, &buffer, sizeof(buffer));
 }
 
@@ -318,7 +335,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    if(get_boolean_config_value(FAST_SERIAL_KEY)) {
+    /*if(get_boolean_config_value(FAST_SERIAL_KEY)) {
         fast_serial = 1;
     }
 
@@ -332,7 +349,8 @@ int main(int argc, char *argv[]) {
 
     if(get_boolean_config_value(NO_BTFL_HD_KEY)) {
         no_btfl_hd = 1;
-    }
+    }*/
+    compress=1;
 
     if(fast_serial == 1) {
         printf("Configured to use 230400 baud rate. \n");
@@ -342,9 +360,10 @@ int main(int argc, char *argv[]) {
         printf("Configured to use serial caching. \n");
     }
 
-    dji_shm_state_t dji_radio;
+    // X
+    /*dji_shm_state_t dji_radio;
     memset(&dji_radio, 0, sizeof(dji_radio));
-    open_dji_radio_shm(&dji_radio);
+    open_dji_radio_shm(&dji_radio);*/
 
     char *ip_address = argv[optind];
     char *serial_port = argv[optind + 1];
@@ -355,12 +374,19 @@ int main(int argc, char *argv[]) {
     msp_state_t *tx_msp_state = calloc(1, sizeof(msp_state_t));
     rx_msp_state->cb = &rx_msp_callback;
     tx_msp_state->cb = &tx_msp_callback;
-    serial_fd = open_serial_port(serial_port, fast_serial ? B230400 : B115200);
+    //serial_fd = open_serial_port(serial_port, fast_serial ? B230400 : B115200);
+    const char *x_serial_fd_pty_ptr;
+    serial_fd = open_pty(&x_serial_fd_pty_ptr);
+    printf("x_serial_fd_pty_ptr %s\n", x_serial_fd_pty_ptr);
     if (serial_fd <= 0) {
         printf("Failed to open serial port!\n");
         return 1;
     }
     pty_fd = open_pty(&pty_name_ptr);
+    //int tmp=serial_fd;
+    //serial_fd=pty_fd;
+    //pty_fd=tmp;
+    //printf("URGHS\n");
     printf("Allocated PTY %s\n", pty_name_ptr);
     if ((argc - optind) > 2) {
         unlink(argv[optind + 2]);
@@ -372,7 +398,8 @@ int main(int argc, char *argv[]) {
     int data_fd = connect_to_server(ip_address, DATA_PORT);
 
     if (compress) {
-        update_rate_hz = get_integer_config_value(UPDATE_RATE_KEY);
+        //update_rate_hz = get_integer_config_value(UPDATE_RATE_KEY);
+        update_rate_hz = 30;
         display_driver = calloc(1, sizeof(displayport_vtable_t));
         display_driver->draw_character = &msp_draw_character;
         display_driver->clear_screen = &msp_clear_screen;
@@ -404,6 +431,8 @@ int main(int argc, char *argv[]) {
             for (ssize_t i = 0; i < serial_data_size; i++) {
                 msp_process_data(rx_msp_state, serial_data[i]);
             }
+        }else{
+            DEBUG_PRINT("NO DATA RECEIVED! length %d\n", serial_data_size);
         }
         // We got data from DJI (the pty), so see what to do next:
         if(0 < (serial_data_size = read(pty_fd, serial_data, sizeof(serial_data)))) {
@@ -427,9 +456,12 @@ int main(int argc, char *argv[]) {
         if(timespec_subtract_ns(&now, &last_data) > (NSEC_PER_SEC / 2)) {
             // More than 500ms have elapsed, let's go ahead and send a data frame
             clock_gettime(CLOCK_MONOTONIC, &last_data);
-            send_data_packet(data_fd, &dji_radio);
+            //Xsend_data_packet(data_fd, &dji_radio);
             if(current_fc_identifier[0] == 0) {
-                send_variant_request(serial_fd);
+                //send_variant_request(serial_fd);
+                send_version_request2(serial_fd);
+                //send_version_request2(serial_fd);
+                //x_send_status(serial_fd);
             }
         }
         if(compress && (timespec_subtract_ns(&now, &last_frame) > (NSEC_PER_SEC / update_rate_hz))) {
@@ -437,7 +469,7 @@ int main(int argc, char *argv[]) {
             clock_gettime(CLOCK_MONOTONIC, &last_frame);
         }
     }
-    close_dji_radio_shm(&dji_radio);
+    //Xclose_dji_radio_shm(&dji_radio);
     close(serial_fd);
     close(pty_fd);
     close(socket_fd);
