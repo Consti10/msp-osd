@@ -12,8 +12,10 @@ OSD_LIBS=-lcsfml-graphics
 osd_sfml: $(OSD_OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(OSD_LIBS)
 
-#msp_displayport_mux: $(DISPLAYPORT_MUX_OBJ)
-#	$(CC) -o $@ $^ $(CFLAGS)
+msp_displayport_mux: $(DISPLAYPORT_MUX_OBJ)
+	$(CC) -o $@ $^ $(CFLAGS)
+
+all: osd_sfml msp_displayport_mux
 
 clean: 
 	rm -rf *.o
