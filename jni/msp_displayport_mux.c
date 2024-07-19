@@ -109,8 +109,8 @@ static int16_t msp_msg_from_cache(uint8_t msg_buffer[], uint8_t cmd_id) {
         // cache hit, let's see if it's too old
         // messages we care to expire after second boundary
         if(cmd_id == MSP_CMD_ANALOG
-        || cmd_id == MSP_CMD_STATUS
-        || cmd_id == MSP_CMD_BATTERY_STATE) {
+           || cmd_id == MSP_CMD_STATUS
+           || cmd_id == MSP_CMD_BATTERY_STATE) {
             struct timespec now;
             clock_gettime(CLOCK_MONOTONIC, &now);
             if(timespec_subtract_ns(&now, &cache_message->time) > NSEC_PER_SEC) {
@@ -137,25 +137,11 @@ static void send_variant_request(int serial_fd) {
     uint8_t buffer[6];
     construct_msp_command(buffer, MSP_CMD_FC_VARIANT, NULL, 0, MSP_OUTBOUND);
     write(serial_fd, &buffer, sizeof(buffer));
-    DEBUG_PRINT("send_variant_request %d\n", (int)sizeof(buffer));
-}
-
-static void send_version_request2(int serial_fd) {
-    uint8_t buffer[6];
-    construct_msp_command(buffer, MSP_CMD_FC_VERSION, NULL, 0, MSP_OUTBOUND);
-    write(serial_fd, &buffer, sizeof(buffer));
-    DEBUG_PRINT("send_version_request2 %d\n", (int)sizeof(buffer));
 }
 
 static void send_version_request(int serial_fd) {
     uint8_t buffer[6];
     construct_msp_command(buffer, MSP_CMD_API_VERSION, NULL, 0, MSP_OUTBOUND);
-    write(serial_fd, &buffer, sizeof(buffer));
-}
-
-static void x_send_status(int serial_fd) {
-    uint8_t buffer[6];
-    construct_msp_command(buffer, MSP_CMD_STATUS, NULL, 0, MSP_OUTBOUND);
     write(serial_fd, &buffer, sizeof(buffer));
 }
 
@@ -228,7 +214,7 @@ static void rx_msp_callback(msp_msg_t *msp_message)
         default: {
             uint16_t size = msp_data_from_msg(message_buffer, msp_message);
             if(serial_passthrough || cache_msp_message(msp_message)) {
-                // Either serial passthrough was on, or the cache was enabled but missed (a response was not available). 
+                // Either serial passthrough was on, or the cache was enabled but missed (a response was not available).
                 // Either way, this means we need to send the message through to DJI.
                 write(pty_fd, message_buffer, size);
             }
@@ -287,9 +273,9 @@ static void msp_draw_complete() {
 }
 
 static void msp_set_options(uint8_t font_num, msp_hd_options_e is_hd) {
-   DEBUG_PRINT("Got options!\n");
-   msp_clear_screen();
-   msp_hd_option = is_hd;
+    DEBUG_PRINT("Got options!\n");
+    msp_clear_screen();
+    msp_hd_option = is_hd;
 }
 
 static void send_compressed_screen(int compressed_fd) {
@@ -318,15 +304,15 @@ int main(int argc, char *argv[]) {
     uint8_t msp_command_number = 0;
     while((opt = getopt(argc, argv, "fsp")) != -1){
         switch(opt){
-        case 'f':
-            fast_serial = 1;
-            break;
-        case 's':
-            serial_passthrough = 0;
-            break;
-        case '?':
-            printf("unknown option: %c\n", optopt);
-            break;
+            case 'f':
+                fast_serial = 1;
+                break;
+            case 's':
+                serial_passthrough = 0;
+                break;
+            case '?':
+                printf("unknown option: %c\n", optopt);
+                break;
         }
     }
 
@@ -360,10 +346,9 @@ int main(int argc, char *argv[]) {
         printf("Configured to use serial caching. \n");
     }
 
-    // X
-    /*dji_shm_state_t dji_radio;
+    dji_shm_state_t dji_radio;
     memset(&dji_radio, 0, sizeof(dji_radio));
-    open_dji_radio_shm(&dji_radio);*/
+    open_dji_radio_shm(&dji_radio);
 
     char *ip_address = argv[optind];
     char *serial_port = argv[optind + 1];
@@ -383,23 +368,18 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     pty_fd = open_pty(&pty_name_ptr);
-    //int tmp=serial_fd;
-    //serial_fd=pty_fd;
-    //pty_fd=tmp;
-    //printf("URGHS\n");
     printf("Allocated PTY %s\n", pty_name_ptr);
     if ((argc - optind) > 2) {
         unlink(argv[optind + 2]);
-        symlink(pty_name_ptr, argv[optind + 2]);   
-        printf("Relinked %s to %s\n", argv[optind + 2], pty_name_ptr); 
+        symlink(pty_name_ptr, argv[optind + 2]);
+        printf("Relinked %s to %s\n", argv[optind + 2], pty_name_ptr);
     }
     socket_fd = connect_to_server(ip_address, MSP_PORT);
     compressed_fd = connect_to_server(ip_address, COMPRESSED_DATA_PORT);
     int data_fd = connect_to_server(ip_address, DATA_PORT);
 
     if (compress) {
-        //update_rate_hz = get_integer_config_value(UPDATE_RATE_KEY);
-        update_rate_hz = 30;
+        update_rate_hz = get_integer_config_value(UPDATE_RATE_KEY);
         display_driver = calloc(1, sizeof(displayport_vtable_t));
         display_driver->draw_character = &msp_draw_character;
         display_driver->clear_screen = &msp_clear_screen;
@@ -424,15 +404,13 @@ int main(int argc, char *argv[]) {
         poll_fds[1].events = POLLIN;
 
         poll(poll_fds, 2, ((MSEC_PER_SEC / update_rate_hz) / 2));
-        
+
         // We got inbound serial data, process it as MSP data.
         if (0 < (serial_data_size = read(serial_fd, serial_data, sizeof(serial_data)))) {
             DEBUG_PRINT("RECEIVED data! length %d\n", serial_data_size);
             for (ssize_t i = 0; i < serial_data_size; i++) {
                 msp_process_data(rx_msp_state, serial_data[i]);
             }
-        }else{
-            DEBUG_PRINT("NO DATA RECEIVED! length %d\n", serial_data_size);
         }
         // We got data from DJI (the pty), so see what to do next:
         if(0 < (serial_data_size = read(pty_fd, serial_data, sizeof(serial_data)))) {
@@ -456,12 +434,9 @@ int main(int argc, char *argv[]) {
         if(timespec_subtract_ns(&now, &last_data) > (NSEC_PER_SEC / 2)) {
             // More than 500ms have elapsed, let's go ahead and send a data frame
             clock_gettime(CLOCK_MONOTONIC, &last_data);
-            //Xsend_data_packet(data_fd, &dji_radio);
+            send_data_packet(data_fd, &dji_radio);
             if(current_fc_identifier[0] == 0) {
-                //send_variant_request(serial_fd);
-                send_version_request2(serial_fd);
-                //send_version_request2(serial_fd);
-                //x_send_status(serial_fd);
+                send_variant_request(serial_fd);
             }
         }
         if(compress && (timespec_subtract_ns(&now, &last_frame) > (NSEC_PER_SEC / update_rate_hz))) {
@@ -469,7 +444,7 @@ int main(int argc, char *argv[]) {
             clock_gettime(CLOCK_MONOTONIC, &last_frame);
         }
     }
-    //Xclose_dji_radio_shm(&dji_radio);
+    close_dji_radio_shm(&dji_radio);
     close(serial_fd);
     close(pty_fd);
     close(socket_fd);
