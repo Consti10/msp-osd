@@ -1,30 +1,46 @@
 #include <stdlib.h>
 #include "dji_display.h"
-#include "util/debug.h"
+#include "../util/debug.h"
 
 #define GOGGLES_V1_VOFFSET 575
 #define GOGGLES_V2_VOFFSET 215
 
+
+#ifdef EMULATE_DJI_GOGGLES
+#include "SDL2/SDL.h"
+#define WINDOW_WIDTH 1440
+#define WINDOW_HEIGHT 810
+SDL_Window *screen;
+SDL_Renderer *renderer;
+uint8_t intermediate_framebuffer[1440*810*4];
+#endif
+
+
 dji_display_state_t *dji_display_state_alloc(uint8_t is_v2_goggles) {
     dji_display_state_t *display_state = calloc(1, sizeof(dji_display_state_t));
+#ifndef EMULATE_DJI_GOGGLES
     display_state->disp_instance_handle = (duss_disp_instance_handle_t *)calloc(1, sizeof(duss_disp_instance_handle_t));
     display_state->fb_0 = (duss_frame_buffer_t *)calloc(1,sizeof(duss_frame_buffer_t));
     display_state->fb_1 = (duss_frame_buffer_t *)calloc(1,sizeof(duss_frame_buffer_t));
     display_state->pb_0 = (duss_disp_plane_blending_t *)calloc(1, sizeof(duss_disp_plane_blending_t));
+#endif
     display_state->is_v2_goggles = is_v2_goggles;
     display_state->frame_drawn = 0;
     return display_state;
 }
 
 void dji_display_state_free(dji_display_state_t *display_state) {
+#ifndef EMULATE_DJI_GOGGLES
     free(display_state->disp_instance_handle);
     free(display_state->fb_0);
     free(display_state->fb_1);
     free(display_state->pb_0);
+#endif
     free(display_state);
 }
 
 void dji_display_close_framebuffer(dji_display_state_t *display_state) {
+#ifndef EMULATE_DJI_GOGGLES
     duss_hal_display_port_enable(display_state->disp_instance_handle, 3, 0);
     duss_hal_display_release_plane(display_state->disp_instance_handle, display_state->plane_id);
     duss_hal_display_close(display_state->disp_handle, &display_state->disp_instance_handle);
@@ -34,9 +50,14 @@ void dji_display_close_framebuffer(dji_display_state_t *display_state) {
     duss_hal_device_stop(display_state->ion_handle);
     duss_hal_device_close(display_state->ion_handle);
     duss_hal_deinitialize();
+#else
+    SDL_DestroyWindow(screen);
+    SDL_Quit();
+#endif
 }
 
 void dji_display_open_framebuffer(dji_display_state_t *display_state, duss_disp_plane_id_t plane_id) {
+#ifndef EMULATE_DJI_GOGGLES
     uint32_t hal_device_open_unk = 0;
     duss_result_t res = 0;
 
@@ -161,10 +182,14 @@ void dji_display_open_framebuffer(dji_display_state_t *display_state, duss_disp_
         fb->height = 810;
         fb->plane_count = 1;
     }
+#else
+    // XX TODO
+#endif
 }
 
 
 void dji_display_open_framebuffer_injected(dji_display_state_t *display_state, duss_disp_instance_handle_t *disp, duss_hal_obj_handle_t ion_handle, duss_disp_plane_id_t plane_id) {
+#ifndef EMULATE_DJI_GOGGLES
     uint32_t hal_device_open_unk = 0;
     duss_result_t res = 0;
     display_state->disp_instance_handle = disp;
@@ -258,9 +283,33 @@ void dji_display_open_framebuffer_injected(dji_display_state_t *display_state, d
         fb->height = 810;
         fb->plane_count = 1;
     }
+#else
+    if(SDL_Init(SDL_INIT_VIDEO) != 0) {
+        fprintf(stderr, "Could not init SDL: %s\n", SDL_GetError());
+        return 1;
+    }
+    screen = SDL_CreateWindow("My application",
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              WINDOW_WIDTH, WINDOW_HEIGHT,
+                              0);
+    if(!screen) {
+        fprintf(stderr, "Could not create window\n");
+        return 1;
+    }
+    renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE);
+    if(!renderer) {
+        fprintf(stderr, "Could not create renderer\n");
+        return 1;
+    }
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+#endif
 }
 
 void dji_display_push_frame(dji_display_state_t *display_state) {
+#ifndef EMULATE_DJI_GOGGLES
     if (display_state->frame_drawn == 0) {
         duss_frame_buffer_t *fb = display_state->fb_0;
         duss_hal_mem_sync(fb->buffer, 1);
@@ -271,9 +320,52 @@ void dji_display_push_frame(dji_display_state_t *display_state) {
         DEBUG_PRINT("!!! Dropped frame due to pending frame push!\n");
     }
     memcpy(display_state->fb0_virtual_addr, display_state->fb1_virtual_addr, sizeof(uint32_t) * 1440 * 810);
+#else
+    SDL_Surface *surface = SDL_GetWindowSurface(screen);
+    if(SDL_LockSurface(surface)!=0){
+        fprintf(stderr, "Cannot lock surface\n");
+        return;
+    }
+    uint8_t* dst_fb=(uint8_t*)surface->pixels;
+    uint8_t* src_fb=intermediate_framebuffer;
+    int dst_offset=0;
+    int src_offset=0;
+    for(int i=0;i<WINDOW_HEIGHT;i++){
+        // A bit weird, we need to work around that dji has a 'backwards alpha frame buffer'
+        for(int j=0;j<WINDOW_WIDTH;j++){
+            dst_fb[dst_offset++]=src_fb[src_offset++];
+            dst_fb[dst_offset++]=src_fb[src_offset++];
+            dst_fb[dst_offset++]=src_fb[src_offset++];
+            dst_fb[dst_offset++]=255-src_fb[src_offset++]; // Alpha
+        }
+        if(surface->pitch>WINDOW_WIDTH*4){
+            dst_offset+=surface->pitch-(WINDOW_WIDTH*4);
+        }
+        //memcpy(dst_fb+dst_offset,src_fb+src_offset,WINDOW_WIDTH*4);
+        //src_offset+=WINDOW_WIDTH*4;
+        //dst_offset+=surface->pitch;
+    }
+    SDL_UnlockSurface(surface);
+    SDL_RenderPresent(renderer);
+#endif
 }
 
 void *dji_display_get_fb_address(dji_display_state_t *display_state) {
+#ifndef EMULATE_DJI_GOGGLES
      return display_state->fb1_virtual_addr;
+#else
+    return &intermediate_framebuffer;
+#endif
 }
 
+int sdl2_check_for_termination(){
+#ifndef EMULATE_DJI_GOGGLES
+    SDL_Event event;
+    if( SDL_PollEvent(&event)){
+        if( event.type == SDL_QUIT){
+            return 1;
+        }
+    }
+#endif
+    return 0;
+}

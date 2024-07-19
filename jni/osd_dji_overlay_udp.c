@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -660,7 +661,12 @@ void osd_directfb(duss_disp_instance_handle_t *disp, duss_hal_obj_handle_t ion_h
         if (rec_pb_is_enabled()) {
             rec_pb_timeout_hook();
         }
+#ifdef EMULATE_DJI_GOGGLES
+        quit = sdl2_check_for_termination();
+#endif
     }
+    DEBUG_PRINT("Terminating\n");
+    stop_display();
 
     free(display_driver);
     free(msp_state);
@@ -671,3 +677,10 @@ void osd_directfb(duss_disp_instance_handle_t *disp, duss_hal_obj_handle_t ion_h
     close(event_fd);
     return;
 }
+
+#ifdef EMULATE_DJI_GOGGLES
+int main(int argc, char *argv[])
+{
+    osd_directfb(0,0);
+}
+#endif

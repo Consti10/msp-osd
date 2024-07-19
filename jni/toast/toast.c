@@ -2,11 +2,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <time.h>
 #include <ctype.h>
-#include "json/osd_config.h"
-#include "util/time_util.h"
+#include <stdarg.h>
+#include "../json/osd_config.h"
+#include "../util/time_util.h"
 
 #define DATASIZE 20
 #define TOP_ROW 5

@@ -1,6 +1,11 @@
 #pragma once
+#define _GNU_SOURCE
 
 #include <stdbool.h>
+#include <stdint.h>
+#include <sys/time.h>
+#include <pthread.h>
+#include <stdio.h>
 
 typedef unsigned char undefined;
 
@@ -176,9 +181,10 @@ typedef struct debug_cp_osd_info debug_cp_osd_info;
 
 typedef struct debug_cp_osd_info debug_cp_osd_info_t;
 
-typedef ulonglong __uint64_t;
 
-typedef __uint64_t uint64_t;
+//typedef ulonglong __uint64_t;
+
+//typedef __uint64_t uint64_t;
 
 typedef enum record_mode
 {
@@ -268,7 +274,7 @@ typedef struct product_shm_info product_shm_info;
 
 typedef struct product_shm_info product_shm_info_t;
 
-typedef uint size_t;
+//typedef uint size_t;
 
 typedef struct modem_shmem_info_t modem_shmem_info_t;
 
@@ -276,7 +282,7 @@ typedef struct racing_debug_info_t racing_debug_info_t;
 
 typedef struct duss_osal_task_attrib_t duss_osal_task_attrib_t;
 
-typedef long pthread_t;
+//typedef long pthread_t;
 
 typedef struct duss_storage_client duss_storage_client;
 
@@ -537,9 +543,9 @@ typedef struct vdec_video_file_info vdec_video_file_info;
 
 typedef struct vdec_video_file_info vdec_video_file_info_t;
 
-typedef longlong __int64_t;
+//typedef longlong __int64_t;
 
-typedef __int64_t int64_t;
+//typedef __int64_t int64_t;
 
 typedef struct sqlite3 sqlite3;
 
@@ -888,9 +894,9 @@ typedef __kernel_long_t __kernel_off_t;
 
 typedef __kernel_off_t off_t;
 
-typedef off_t fpos_t;
+//typedef off_t fpos_t;
 
-typedef struct __sFILE FILE;
+//typedef struct __sFILE FILE;
 
 typedef struct pcm_config pcm_config;
 
@@ -1074,7 +1080,7 @@ typedef struct duss_mb_filter_t duss_mb_filter_t;
 
 typedef struct duss_mb_route_table_t duss_mb_route_table_t;
 
-typedef struct fd_set fd_set;
+//typedef struct fd_set fd_set;
 
 typedef struct duss_osal_msgq_attrib_t duss_osal_msgq_attrib_t;
 
@@ -3024,11 +3030,11 @@ struct gs_debug_ctrl
     undefined field9_0x117;
 };
 
-struct timeval
+/*struct timeval
 {
     __kernel_time_t tv_sec;
     __kernel_suseconds_t tv_usec;
-};
+};*/
 
 struct pcm_config
 {
@@ -4285,11 +4291,11 @@ struct _DUSS_MSG_WORKMODE_t
     uint8_t WorkMode;
 };
 
-struct timespec
+/*struct timespec
 {
     __kernel_time_t tv_sec;
     long tv_nsec;
-};
+};*/
 
 struct ext_fc_ops
 {
