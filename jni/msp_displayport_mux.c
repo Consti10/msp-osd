@@ -379,7 +379,7 @@ int main(int argc, char *argv[]) {
     int data_fd = connect_to_server(ip_address, DATA_PORT);
 
     if (compress) {
-        update_rate_hz = get_integer_config_value(UPDATE_RATE_KEY);
+        update_rate_hz = 30;//get_integer_config_value(UPDATE_RATE_KEY);
         display_driver = calloc(1, sizeof(displayport_vtable_t));
         display_driver->draw_character = &msp_draw_character;
         display_driver->clear_screen = &msp_clear_screen;
