@@ -359,10 +359,11 @@ void *dji_display_get_fb_address(dji_display_state_t *display_state) {
 }
 
 int sdl2_check_for_termination(){
-#ifndef EMULATE_DJI_GOGGLES
+#ifdef EMULATE_DJI_GOGGLES
     SDL_Event event;
     if( SDL_PollEvent(&event)){
         if( event.type == SDL_QUIT){
+            fprintf(stderr, "QUIT!\n");
             return 1;
         }
     }
