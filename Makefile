@@ -20,10 +20,11 @@ msp_displayport_mux: $(DISPLAYPORT_MUX_OBJ)
 osd_dji_overlay_udp: $(X_DJI_UDP_OVERLAY_OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(X_DJI_UDP_OVERLAY_LIBS)
 
-all: osd_sfml msp_displayport_mux
+all: osd_sfml msp_displayport_mux osd_dji_overlay_udp
 
 clean: 
 	rm -rf *.o
 	rm -rf **/*.o
 	rm -f msp_displayport_mux
 	rm -f osd_sfml
+	rm -f osd_dji_overlay_udp
