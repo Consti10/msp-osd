@@ -145,6 +145,12 @@ static void send_version_request(int serial_fd) {
     write(serial_fd, &buffer, sizeof(buffer));
 }
 
+static void send_fc_version_request(int serial_fd) {
+    uint8_t buffer[6];
+    construct_msp_command(buffer, MSP_CMD_FC_VERSION, NULL, 0, MSP_OUTBOUND);
+    write(serial_fd, &buffer, sizeof(buffer));
+}
+
 static void copy_to_msp_frame_buffer(void *buffer, uint16_t size) {
     memcpy(&frame_buffer[fb_cursor], buffer, size);
     fb_cursor += size;
@@ -437,6 +443,7 @@ int main(int argc, char *argv[]) {
             send_data_packet(data_fd, &dji_radio);
             if(current_fc_identifier[0] == 0) {
                 send_variant_request(serial_fd);
+                //send_fc_version_request(serial_fd);
             }
         }
         if(compress && (timespec_subtract_ns(&now, &last_frame) > (NSEC_PER_SEC / update_rate_hz))) {
