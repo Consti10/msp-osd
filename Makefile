@@ -6,7 +6,7 @@ OSD_OBJ = $(addprefix $(SRCDIR), osd_sfml_udp.o net/network.o msp/msp.o msp/msp_
 DISPLAYPORT_MUX_OBJ = $(addprefix $(SRCDIR), msp_displayport_mux.o net/serial.o net/network.o msp/msp.o msp/msp_displayport.o lz4/lz4.o util/fs_util.o hw/dji_radio_shm.o json/parson.o json/osd_config.o)
 X_DJI_UDP_OVERLAY_OBJ = $(addprefix $(SRCDIR), osd_dji_overlay_udp.o net/serial.o net/network.o msp/msp.o msp/msp_displayport.o lz4/lz4.o util/fs_util.o toast/toast.o fakehd/fakehd.o json/parson.o json/osd_config.o font/font.o  hw/dji_radio_shm.o hw/dji_display.o hw/dji_services.o rec/rec.o rec/rec_shim.o rec/rec_util.o rec/rec_pb.o libspng/spng.o)
 OSD_LIBS=-lcsfml-graphics
-X_DJI_UDP_OVERLAY_LIBS = -lz -lm -lSDL2
+X_DJI_UDP_OVERLAY_LIBS = -lz -lm `pkg-config sdl3 --cflags --libs`
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)

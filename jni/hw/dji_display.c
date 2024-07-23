@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "dji_display.h"
 #include "../util/debug.h"
 
@@ -7,7 +8,9 @@
 
 
 #ifdef EMULATE_DJI_GOGGLES
-#include "SDL2/SDL.h"
+//#include "SDL2/SDL.h"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #define WINDOW_WIDTH 1440
 #define WINDOW_HEIGHT 810
 SDL_Window *screen;
@@ -288,21 +291,18 @@ void dji_display_open_framebuffer_injected(dji_display_state_t *display_state, d
         fprintf(stderr, "Could not init SDL: %s\n", SDL_GetError());
         return 1;
     }
-    screen = SDL_CreateWindow("My application",
-                              SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED,
-                              WINDOW_WIDTH, WINDOW_HEIGHT,
-                              0);
+    screen = SDL_CreateWindow("WTFOS", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_TRANSPARENT);
+
     if(!screen) {
         fprintf(stderr, "Could not create window\n");
         return 1;
     }
-    renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE);
+    renderer = SDL_CreateRenderer(screen, NULL);
     if(!renderer) {
         fprintf(stderr, "Could not create renderer\n");
         return 1;
     }
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
 #endif
@@ -336,7 +336,9 @@ void dji_display_push_frame(dji_display_state_t *display_state) {
             dst_fb[dst_offset++]=src_fb[src_offset++];
             dst_fb[dst_offset++]=src_fb[src_offset++];
             dst_fb[dst_offset++]=src_fb[src_offset++];
-            dst_fb[dst_offset++]=255-src_fb[src_offset++]; // Alpha
+            //dst_fb[dst_offset++]=src_fb[src_offset++]; // Alpha
+            dst_fb[dst_offset++]=255;
+            src_offset++;
         }
         if(surface->pitch>WINDOW_WIDTH*4){
             dst_offset+=surface->pitch-(WINDOW_WIDTH*4);
@@ -362,7 +364,7 @@ int sdl2_check_for_termination(){
 #ifdef EMULATE_DJI_GOGGLES
     SDL_Event event;
     if( SDL_PollEvent(&event)){
-        if( event.type == SDL_QUIT){
+        if( event.type == SDL_EVENT_QUIT){
             fprintf(stderr, "QUIT!\n");
             return 1;
         }

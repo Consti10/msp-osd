@@ -223,7 +223,7 @@ static void render_screen() {
         clear_framebuffer();
     }
     dji_display_push_frame(dji_display);
-    DEBUG_PRINT("drew a frame\n");
+    //DEBUG_PRINT("drew a frame\n");
     clock_gettime(CLOCK_MONOTONIC, &last_render);
 }
 
