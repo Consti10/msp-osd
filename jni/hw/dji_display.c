@@ -324,7 +324,7 @@ void dji_display_push_frame(dji_display_state_t *display_state) {
     memcpy(display_state->fb0_virtual_addr, display_state->fb1_virtual_addr, sizeof(uint32_t) * 1440 * 810);
 #else
     SDL_Texture* texture = SDL_CreateTexture(renderer,
-                                             SDL_PIXELFORMAT_RGBA8888,
+                                             SDL_PIXELFORMAT_RGBA32,
                                              SDL_TEXTUREACCESS_STATIC, //SDL_TEXTUREACCESS_STREAMING
                                              WINDOW_WIDTH,
                                              WINDOW_HEIGHT);
@@ -387,11 +387,10 @@ void dji_display_push_frame(dji_display_state_t *display_state) {
         for (int j = 0; j < WINDOW_WIDTH; j++) {
             int pixel_offset_coordinates=i*WINDOW_WIDTH+j;
             int pixel_offset_bytes=pixel_offset_coordinates*4;
-            dst_fb[pixel_offset_bytes+2]=src_fb[pixel_offset_bytes+0];
+            dst_fb[pixel_offset_bytes+0]=src_fb[pixel_offset_bytes+0];
             dst_fb[pixel_offset_bytes+1]=src_fb[pixel_offset_bytes+1];
-            dst_fb[pixel_offset_bytes+0]=src_fb[pixel_offset_bytes+2];
+            dst_fb[pixel_offset_bytes+2]=src_fb[pixel_offset_bytes+2];
             dst_fb[pixel_offset_bytes+3]=src_fb[pixel_offset_bytes+3];
-
             //dst_fb[dst_offset++] = 255;   // A
             //dst_fb[dst_offset++] = 255;   // B
             //dst_fb[dst_offset++] = 0;     // G
@@ -410,7 +409,7 @@ void dji_display_push_frame(dji_display_state_t *display_state) {
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_ADD_PREMULTIPLIED); //SDL_BLENDMODE_ADD
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND_PREMULTIPLIED); //SDL_BLENDMODE_ADD
     SDL_RenderTexture(renderer, texture, NULL, NULL);
     SDL_RenderPresent(renderer);
     SDL_DestroyTexture(texture);
