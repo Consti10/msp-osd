@@ -171,10 +171,18 @@ static void draw_character_map(display_info_t *display_info, void* restrict fb_a
                 uint32_t target_offset = ((pixel_x * BYTES_PER_PIXEL) + (pixel_y * WIDTH * BYTES_PER_PIXEL));
                 for(uint8_t gy = 0; gy < display_info->font_height; gy++) {
                     for(uint8_t gx = 0; gx < display_info->font_width; gx++) {
-                        *((uint8_t *)fb_addr + target_offset) = *(uint8_t *)((uint8_t *)font + font_offset + 2);
+                        // DJI apparently uses a really weird pixel format ...
+#ifdef EMULATE_DJI_GOGGLES
+                        *((uint8_t *)fb_addr + target_offset) = *(uint8_t *)((uint8_t *)font + font_offset + 0);
                         *((uint8_t *)fb_addr + target_offset + 1) = *(uint8_t *)((uint8_t *)font + font_offset + 1);
-                        *((uint8_t *)fb_addr + target_offset + 2) = *(uint8_t *)((uint8_t *)font + font_offset);
-                        *((uint8_t *)fb_addr + target_offset + 3) = ~*(uint8_t *)((uint8_t *)font + font_offset + 3);
+                        *((uint8_t *)fb_addr + target_offset + 2) = *(uint8_t *)((uint8_t *)font + font_offset+2);
+                        *((uint8_t *)fb_addr + target_offset + 3) = *(uint8_t *)((uint8_t *)font + font_offset + 3);
+#else
+                        *((uint8_t *)fb_addr + target_offset) = *(uint8_t *)((uint8_t *)font + font_offset + 2); // ? B
+                        *((uint8_t *)fb_addr + target_offset + 1) = *(uint8_t *)((uint8_t *)font + font_offset + 1); // ? G
+                        *((uint8_t *)fb_addr + target_offset + 2) = *(uint8_t *)((uint8_t *)font + font_offset);  // ? R
+                        *((uint8_t *)fb_addr + target_offset + 3) = ~*(uint8_t *)((uint8_t *)font + font_offset + 3); // ? A
+#endif
                         font_offset += BYTES_PER_PIXEL;
                         target_offset += BYTES_PER_PIXEL;
                     }
@@ -190,8 +198,12 @@ static void draw_character_map(display_info_t *display_info, void* restrict fb_a
 
 static void clear_framebuffer() {
     void *fb_addr = dji_display_get_fb_address(dji_display);
+#ifdef EMULATE_DJI_GOGGLES
+    memset(fb_addr, 0x00000000, WIDTH * HEIGHT * BYTES_PER_PIXEL);
+#else
     // DJI has a backwards alpha channel - FF is transparent, 00 is opaque.
     memset(fb_addr, 0x000000FF, WIDTH * HEIGHT * BYTES_PER_PIXEL);
+#endif
 }
 
 static void draw_screen() {

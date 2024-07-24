@@ -298,12 +298,14 @@ void dji_display_open_framebuffer_injected(dji_display_state_t *display_state, d
         return 1;
     }
     renderer = SDL_CreateRenderer(screen, NULL);
+    //renderer = SDL_CreateSoftwareRenderer(SDL_GetWindowSurface(screen));
     if(!renderer) {
         fprintf(stderr, "Could not create renderer\n");
         return 1;
     }
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
+    SDL_SetRenderDrawBlendMode(renderer,SDL_BLENDMODE_NONE);
     SDL_RenderPresent(renderer);
 #endif
 }
@@ -321,34 +323,97 @@ void dji_display_push_frame(dji_display_state_t *display_state) {
     }
     memcpy(display_state->fb0_virtual_addr, display_state->fb1_virtual_addr, sizeof(uint32_t) * 1440 * 810);
 #else
-    SDL_Surface *surface = SDL_GetWindowSurface(screen);
-    if(SDL_LockSurface(surface)!=0){
-        fprintf(stderr, "Cannot lock surface\n");
+    SDL_Texture* texture = SDL_CreateTexture(renderer,
+                                             SDL_PIXELFORMAT_RGBA8888,
+                                             SDL_TEXTUREACCESS_STATIC, //SDL_TEXTUREACCESS_STREAMING
+                                             WINDOW_WIDTH,
+                                             WINDOW_HEIGHT);
+    if(!texture) {
+        fprintf(stderr, "Could not create texture\n");
         return;
     }
-    uint8_t* dst_fb=(uint8_t*)surface->pixels;
+    /*uint8_t* texture_pixels=NULL;
+    int pitch;
+    SDL_LockTexture(texture,
+                    NULL,      // NULL means the *whole texture* here.
+                    (void**)&texture_pixels,
+                    &pitch);
+    uint8_t* dst_fb=(uint8_t*)texture_pixels;
     uint8_t* src_fb=intermediate_framebuffer;
+    fprintf(stderr,"pitch:%d-%d\n",pitch,WINDOW_WIDTH*4);
     int dst_offset=0;
     int src_offset=0;
     for(int i=0;i<WINDOW_HEIGHT;i++){
         // A bit weird, we need to work around that dji has a 'backwards alpha frame buffer'
         for(int j=0;j<WINDOW_WIDTH;j++){
-            dst_fb[dst_offset++]=src_fb[src_offset++];
-            dst_fb[dst_offset++]=src_fb[src_offset++];
-            dst_fb[dst_offset++]=src_fb[src_offset++];
+            //if(i==30 && j==30){
+                dst_fb[dst_offset++]=0;
+                dst_fb[dst_offset++]=0;
+                dst_fb[dst_offset++]=i;
+                dst_fb[dst_offset++]=0;
+            //}
+            //dst_fb[dst_offset++]=i;
+            //dst_fb[dst_offset++]=i;
+            //dst_fb[dst_offset++]=i;
+            //dst_fb[dst_offset++]=0;
+            //dst_fb[dst_offset++]=src_fb[src_offset++];
+            //dst_fb[dst_offset++]=src_fb[src_offset++];
+            //dst_fb[dst_offset++]=src_fb[src_offset++];
             //dst_fb[dst_offset++]=src_fb[src_offset++]; // Alpha
-            dst_fb[dst_offset++]=255;
-            src_offset++;
+            //dst_fb[dst_offset++]=255;
+            //src_offset++;
         }
-        if(surface->pitch>WINDOW_WIDTH*4){
-            dst_offset+=surface->pitch-(WINDOW_WIDTH*4);
+        if(pitch>WINDOW_WIDTH*4){
+            dst_offset+=pitch-(WINDOW_WIDTH*4);
         }
-        //memcpy(dst_fb+dst_offset,src_fb+src_offset,WINDOW_WIDTH*4);
-        //src_offset+=WINDOW_WIDTH*4;
-        //dst_offset+=surface->pitch;
     }
-    SDL_UnlockSurface(surface);
+    //memcpy(dst_fb,src_fb,WINDOW_WIDTH*WINDOW_HEIGHT*4);
+    SDL_UnlockTexture(texture);*/
+
+    /*uint8_t* pixels=(uint8_t*)intermediate_framebuffer;
+    for (int y = 0; y < WINDOW_HEIGHT; y++) {
+        Uint32 *row = (uint32_t*)pixels + y * WINDOW_WIDTH;
+        for (int x = 0; x < WINDOW_WIDTH; x++) {
+            uint32_t * pixel=row[x];
+            row[x] = 0x00000000;
+        }
+    }*/
+    /*uint8_t another_tmp_buffer[WINDOW_WIDTH*WINDOW_HEIGHT*4];
+    uint8_t* src_fb=intermediate_framebuffer;
+    uint8_t* dst_fb=(uint8_t*)another_tmp_buffer;
+    int dst_offset=0;
+    for(int i=0;i<WINDOW_HEIGHT;i++) {
+        // A bit weird, we need to work around that dji has a 'backwards alpha frame buffer'
+        for (int j = 0; j < WINDOW_WIDTH; j++) {
+            int pixel_offset_coordinates=i*WINDOW_WIDTH+j;
+            int pixel_offset_bytes=pixel_offset_coordinates*4;
+            dst_fb[pixel_offset_bytes+2]=src_fb[pixel_offset_bytes+0];
+            dst_fb[pixel_offset_bytes+1]=src_fb[pixel_offset_bytes+1];
+            dst_fb[pixel_offset_bytes+0]=src_fb[pixel_offset_bytes+2];
+            dst_fb[pixel_offset_bytes+3]=src_fb[pixel_offset_bytes+3];
+
+            //dst_fb[dst_offset++] = 255;   // A
+            //dst_fb[dst_offset++] = 255;   // B
+            //dst_fb[dst_offset++] = 0;     // G
+            //dst_fb[dst_offset++] = 0;     // R
+        }
+    }*/
+
+    SDL_UpdateTexture(texture,NULL,intermediate_framebuffer,WINDOW_WIDTH*4);
+
+    /*SDL_SetRenderTarget(renderer, texture);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
+    SDL_RenderFillRect(renderer, NULL);*/
+
+    SDL_SetRenderTarget(renderer,NULL);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_ADD_PREMULTIPLIED); //SDL_BLENDMODE_ADD
+    SDL_RenderTexture(renderer, texture, NULL, NULL);
     SDL_RenderPresent(renderer);
+    SDL_DestroyTexture(texture);
 #endif
 }
 
